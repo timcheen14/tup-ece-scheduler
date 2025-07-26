@@ -186,12 +186,12 @@ We welcome contributions to improve the TUP ECE Schedule Management System!
 ## 🐛 Known Issues & Future Enhancements
 
 ### Current Limitations
-- Data is stored in browser memory (resets on page refresh)
+- ~~Data is stored in browser memory (resets on page refresh)~~
 - No user authentication system
 - Limited to single-semester scheduling
 
 ### Planned Features
-- [ ] Database integration for persistent storage
+- [✅] Database integration for persistent storage
 - [ ] User authentication and role management
 - [ ] Multi-semester support
 - [ ] Export schedules to PDF/Excel
