@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { Calendar, Clock, Users, MapPin, User, BookOpen, AlertTriangle, Plus, X } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Calendar, Clock, Users, MapPin, User, BookOpen, AlertTriangle, Plus, X, Download } from 'lucide-react';
 
 const TUPECESchedulingSystem = () => {
+  const scheduleTableRef = useRef(null);
+  
   const [schedules, setSchedules] = useState([
     {
       id: 1,
@@ -55,6 +57,129 @@ const TUPECESchedulingSystem = () => {
   const [hasSearched, setHasSearched] = useState(false);
 
   const predefinedRooms = ['E34', 'COE23', 'COE52', 'COE43', 'E20'];
+
+  // Print-based PDF export (reliable browser method)
+  const printSchedule = () => {
+    try {
+      // Get current filter info
+      let filterInfo = '';
+      if (selectedFilter) {
+        filterInfo = `${viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}: ${selectedFilter}`;
+      } else {
+        filterInfo = 'All Schedules';
+      }
+
+      // Create print content
+      const element = scheduleTableRef.current;
+      if (!element) {
+        alert('Schedule table not found');
+        return;
+      }
+
+      // Clone the table
+      const tableClone = element.cloneNode(true);
+      
+      // Remove delete buttons
+      const deleteButtons = tableClone.querySelectorAll('button');
+      deleteButtons.forEach(btn => btn.remove());
+      
+      // Remove hover classes
+      const groupElements = tableClone.querySelectorAll('.group');
+      groupElements.forEach(el => el.classList.remove('group'));
+
+      // Create print window content
+      const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>TUP ECE Schedule - ${filterInfo}</title>
+          <style>
+            @media print {
+              body { margin: 0; }
+              @page { size: A4 landscape; margin: 0.5in; }
+            }
+            body {
+              font-family: Arial, sans-serif;
+              margin: 20px;
+              color: #333;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #dc2626;
+              padding-bottom: 20px;
+            }
+            .header h1 {
+              color: #dc2626;
+              font-size: 24px;
+              font-weight: bold;
+              margin: 0;
+            }
+            .header p {
+              color: #666;
+              margin: 5px 0;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 9px;
+            }
+            th, td {
+              border: 1px solid #333;
+              padding: 6px;
+              text-align: left;
+            }
+            th {
+              background-color: #f3f4f6;
+              font-weight: bold;
+              text-align: center;
+            }
+            .time-cell {
+              background-color: #f9fafb;
+              font-weight: bold;
+            }
+            .schedule-item {
+              background-color: #fef2f2 !important;
+              border: 1px solid #dc2626 !important;
+              padding: 4px !important;
+              font-size: 8px !important;
+              line-height: 1.2;
+            }
+            .schedule-item div {
+              margin: 1px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>TUP ECE Class Schedule</h1>
+            <p>Technological University of the Philippines - Electronics and Communications Engineering</p>
+            <p>Filter: ${filterInfo}</p>
+            <p>Generated on: ${new Date().toLocaleString()}</p>
+          </div>
+          ${tableClone.outerHTML}
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() {
+                window.close();
+              }, 1000);
+            }
+          </script>
+        </body>
+        </html>
+      `;
+
+      // Open print window
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+
+    } catch (error) {
+      console.error('Print failed:', error);
+      alert('Print function failed. Please try again.');
+    }
+  };
 
   // Schedule Finder Algorithm
   const findAvailableSlots = () => {
@@ -410,13 +535,24 @@ const TUPECESchedulingSystem = () => {
                 <p className="text-red-100 mt-1">TUP ECE Schedule Management System</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowForm(true)}
-              className="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Class</span>
-            </button>
+            <div className="flex space-x-2">
+              {activeTab === 'schedule' && (
+                <button
+                  onClick={printSchedule}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Print Schedule</span>
+                </button>
+              )}
+              <button
+                onClick={() => setShowForm(true)}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Class</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -450,47 +586,55 @@ const TUPECESchedulingSystem = () => {
           {activeTab === 'schedule' && (
             <div>
               {/* View Controls */}
-              <div className="mb-6 flex flex-wrap gap-4 items-center">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium text-gray-700">View by:</span>
-                  <select
-                    value={viewMode}
-                    onChange={(e) => {
-                      setViewMode(e.target.value);
-                      setSelectedFilter('');
-                    }}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  >
-                    <option value="section">Section</option>
-                    <option value="room">Room</option>
-                    <option value="faculty">Faculty</option>
-                  </select>
+              <div className="mb-6 flex flex-wrap gap-4 items-center justify-between">
+                <div className="flex flex-wrap gap-4 items-center">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium text-gray-700">View by:</span>
+                    <select
+                      value={viewMode}
+                      onChange={(e) => {
+                        setViewMode(e.target.value);
+                        setSelectedFilter('');
+                      }}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    >
+                      <option value="section">Section</option>
+                      <option value="room">Room</option>
+                      <option value="faculty">Faculty</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium text-gray-700">Filter:</span>
+                    <select
+                      value={selectedFilter}
+                      onChange={(e) => setSelectedFilter(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    >
+                      <option value="">Select {viewMode}</option>
+                      {viewMode === 'section' && getSections().map(section => (
+                        <option key={section} value={section}>{section}</option>
+                      ))}
+                      {viewMode === 'room' && getRooms().map(room => (
+                        <option key={room} value={room}>{room}</option>
+                      ))}
+                      {viewMode === 'faculty' && getFaculty().map(faculty => (
+                        <option key={faculty} value={faculty}>{faculty}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium text-gray-700">Filter:</span>
-                  <select
-                    value={selectedFilter}
-                    onChange={(e) => setSelectedFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  >
-                    <option value="">Select {viewMode}</option>
-                    {viewMode === 'section' && getSections().map(section => (
-                      <option key={section} value={section}>{section}</option>
-                    ))}
-                    {viewMode === 'room' && getRooms().map(room => (
-                      <option key={room} value={room}>{room}</option>
-                    ))}
-                    {viewMode === 'faculty' && getFaculty().map(faculty => (
-                      <option key={faculty} value={faculty}>{faculty}</option>
-                    ))}
-                  </select>
+                {/* Current View Indicator */}
+                <div className="text-sm text-gray-600 bg-gray-100 px-3 py-2 rounded-lg">
+                  <strong>Current View:</strong> {selectedFilter || 'All Schedules'}
+                  {selectedFilter && ` (${viewMode})`}
                 </div>
               </div>
 
               {/* Schedule Grid */}
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-300">
+                <table ref={scheduleTableRef} className="w-full border-collapse border border-gray-300">
                   <thead>
                     <tr className="bg-gray-100">
                       <th className="border border-gray-300 p-3 text-left font-semibold">Time</th>
