@@ -242,7 +242,7 @@ const TUPECESchedulingSystem = () => {
         <body>
           <div class="header">
             <h1>TUP ECE Class Schedule</h1>
-            <p>Technological University of the Philippines - Electronics and Communications Engineering</p>
+            <p>Technological University of the Philippines - ECE Department</p>
             <p>Filter: ${filterInfo}</p>
             <p>Generated on: ${new Date().toLocaleString()}</p>
           </div>
