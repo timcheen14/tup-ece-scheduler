@@ -1,31 +1,115 @@
-import React, { useState, useRef } from 'react';
-import { Calendar, Clock, Users, MapPin, User, BookOpen, AlertTriangle, Plus, X, Download } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Calendar, Clock, Users, MapPin, User, BookOpen, AlertTriangle, Plus, X, Download, Upload, Trash2, ChevronDown } from 'lucide-react';
 
 const TUPECESchedulingSystem = () => {
   const scheduleTableRef = useRef(null);
   
-  const [schedules, setSchedules] = useState([
-    {
-      id: 1,
-      section: 'BSECE 3A',
-      subject: 'Digital Signal Processing',
-      room: 'COE23',
-      faculty: 'Dr. Maria Santos',
-      day: 'Monday',
-      startTime: '08:00',
-      endTime: '09:30'
-    },
-    {
-      id: 2,
-      section: 'BSECE 2B',
-      subject: 'Circuit Analysis',
-      room: 'E34',
-      faculty: 'Prof. Juan dela Cruz',
-      day: 'Monday',
-      startTime: '10:00',
-      endTime: '11:30'
+  // ===== LOCALSTORAGE FUNCTIONS =====
+  
+  // Save schedules to localStorage
+  const saveSchedulesToStorage = (schedulesData) => {
+    try {
+      localStorage.setItem('tupEceSchedules', JSON.stringify(schedulesData));
+      console.log('✅ Schedules saved to localStorage');
+    } catch (error) {
+      console.error('❌ Failed to save schedules:', error);
+      alert('Failed to save schedules. Your browser might not support local storage.');
     }
-  ]);
+  };
+
+  // Load schedules from localStorage
+  const loadSchedulesFromStorage = () => {
+    try {
+      const saved = localStorage.getItem('tupEceSchedules');
+      if (saved) {
+        const parsedSchedules = JSON.parse(saved);
+        console.log('✅ Schedules loaded from localStorage');
+        return parsedSchedules;
+      }
+    } catch (error) {
+      console.error('❌ Failed to load schedules:', error);
+    }
+    
+    // Return default schedules if loading fails or no data exists
+    console.log('📝 Using default schedules');
+    return [
+      {
+        id: 1,
+        section: 'ECE 3A',
+        subject: 'PECEE 6',
+        room: 'E34',
+        faculty: 'TMA',
+        day: 'Monday',
+        startTime: '07:00',
+        endTime: '10:00'
+      },
+      {
+        id: 2,
+        section: 'ECE 2B',
+        subject: 'ACEECE 4',
+        room: 'E20',
+        faculty: 'EAG',
+        day: 'Monday',
+        startTime: '10:00',
+        endTime: '11:30'
+      }
+    ];
+  };
+
+  // Export schedules as JSON file
+  const exportSchedulesToFile = () => {
+    const dataStr = JSON.stringify(schedules, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tup-ece-schedules-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    alert('📁 Schedule exported successfully!');
+  };
+
+  // Import schedules from JSON file
+  const importSchedulesFromFile = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedSchedules = JSON.parse(e.target.result);
+        if (Array.isArray(importedSchedules)) {
+          setSchedules(importedSchedules);
+          alert(`✅ Successfully imported ${importedSchedules.length} schedules.`);
+        } else {
+          alert('❌ Invalid file format. Please select a valid JSON file.');
+        }
+      } catch (error) {
+        alert('❌ Error reading file. Please check the file format.');
+        console.error('Import error:', error);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; // Reset file input
+  };
+
+  // Clear all saved data
+  const clearStoredData = () => {
+    if (confirm('⚠️ Are you sure you want to clear all saved schedule data? This cannot be undone.')) {
+      localStorage.removeItem('tupEceSchedules');
+      setSchedules(loadSchedulesFromStorage());
+      alert('🗑️ All schedule data has been cleared.');
+    }
+  };
+
+  // ===== STATE VARIABLES =====
+  
+  // Updated to use localStorage
+  const [schedules, setSchedules] = useState(() => loadSchedulesFromStorage());
 
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState('schedule'); // 'schedule' or 'finder'
@@ -55,6 +139,11 @@ const TUPECESchedulingSystem = () => {
   const [finderResults, setFinderResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Auto-save schedules whenever they change
+  useEffect(() => {
+    saveSchedulesToStorage(schedules);
+  }, [schedules]);
 
   const predefinedRooms = ['E34', 'COE23', 'COE52', 'COE43', 'E20'];
 
@@ -153,7 +242,7 @@ const TUPECESchedulingSystem = () => {
         <body>
           <div class="header">
             <h1>TUP ECE Class Schedule</h1>
-            <p>Technological University of the Philippines - Electronics and Communications Engineering</p>
+            <p>Technological University of the Philippines - ECE Department</p>
             <p>Filter: ${filterInfo}</p>
             <p>Generated on: ${new Date().toLocaleString()}</p>
           </div>
@@ -536,6 +625,49 @@ const TUPECESchedulingSystem = () => {
               </div>
             </div>
             <div className="flex space-x-2">
+              {/* Data Management Dropdown */}
+              <div className="relative group">
+                <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors">
+                  <Download className="w-4 h-4" />
+                  <span>Data</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                
+                {/* Dropdown Menu */}
+                <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                  <div className="py-1">
+                    <button
+                      onClick={exportSchedulesToFile}
+                      className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Export to File</span>
+                    </button>
+                    
+                    <label className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center space-x-2 cursor-pointer">
+                      <Upload className="w-4 h-4" />
+                      <span>Import from File</span>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={importSchedulesFromFile}
+                        className="hidden"
+                      />
+                    </label>
+                    
+                    <div className="border-t border-gray-200 my-1"></div>
+                    
+                    <button
+                      onClick={clearStoredData}
+                      className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Clear All Data</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {activeTab === 'schedule' && (
                 <button
                   onClick={printSchedule}
@@ -545,6 +677,7 @@ const TUPECESchedulingSystem = () => {
                   <span>Print Schedule</span>
                 </button>
               )}
+              
               <button
                 onClick={() => setShowForm(true)}
                 className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
