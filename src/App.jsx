@@ -35,20 +35,20 @@ const TUPECESchedulingSystem = () => {
     return [
       {
         id: 1,
-        section: 'ECE 3A',
-        subject: 'PECEE 6',
-        room: 'E34',
-        faculty: 'TMA',
+        section: 'BSECE 3A',
+        subject: 'Digital Signal Processing',
+        room: 'COE23',
+        faculty: 'Dr. Maria Santos',
         day: 'Monday',
-        startTime: '07:00',
-        endTime: '10:00'
+        startTime: '08:00',
+        endTime: '09:30'
       },
       {
         id: 2,
-        section: 'ECE 2B',
-        subject: 'ACEECE 4',
-        room: 'E20',
-        faculty: 'EAG',
+        section: 'BSECE 2B',
+        subject: 'Circuit Analysis',
+        room: 'E34',
+        faculty: 'Prof. Juan dela Cruz',
         day: 'Monday',
         startTime: '10:00',
         endTime: '11:30'
@@ -242,7 +242,7 @@ const TUPECESchedulingSystem = () => {
         <body>
           <div class="header">
             <h1>TUP ECE Class Schedule</h1>
-            <p>Technological University of the Philippines - ECE Department</p>
+            <p>Technological University of the Philippines - Electronics and Communications Engineering</p>
             <p>Filter: ${filterInfo}</p>
             <p>Generated on: ${new Date().toLocaleString()}</p>
           </div>
@@ -339,7 +339,7 @@ const TUPECESchedulingSystem = () => {
     return patterns;
   };
 
-  // Find slots for a specific pattern
+  // FIXED: Find slots for a specific pattern - now prevents overlapping sessions
   const findSlotsForPattern = (pattern) => {
     const results = [];
     
@@ -355,8 +355,8 @@ const TUPECESchedulingSystem = () => {
           const day = daysCombo[index];
           const sessionHours = sessionSlots / 2;
           
-          // Find available time slot for this session
-          const availableSlot = findAvailableTimeSlot(day, sessionSlots, room);
+          // FIXED: Pass already planned sessions to avoid overlaps within the pattern
+          const availableSlot = findAvailableTimeSlot(day, sessionSlots, room, sessions);
           
           if (availableSlot) {
             sessions.push({
@@ -380,7 +380,7 @@ const TUPECESchedulingSystem = () => {
             totalHours: parseFloat(finderData.hours),
             totalSpanDays,
             pattern: pattern.map(p => p/2).join(' + ') + ' hours',
-            searchData: { ...finderData } // Store the original search data
+            searchData: { ...finderData }
           });
         }
       });
@@ -389,7 +389,7 @@ const TUPECESchedulingSystem = () => {
     return results;
   };
 
-  // Generate combinations of days for sessions
+  // FIXED: Generate combinations of days for sessions - prevents problematic same-day overlaps
   const generateDaysCombinations = (numSessions) => {
     const combinations = [];
     
@@ -398,11 +398,8 @@ const TUPECESchedulingSystem = () => {
     } else if (numSessions === 2) {
       for (let i = 0; i < days.length; i++) {
         for (let j = i; j < days.length; j++) {
-          if (i === j) {
-            combinations.push([days[i], days[i]]);
-          } else {
-            combinations.push([days[i], days[j]]);
-          }
+          // Allow same day sessions, but the algorithm will prevent overlaps
+          combinations.push([days[i], days[j]]);
         }
       }
     } else if (numSessions === 3) {
@@ -418,8 +415,8 @@ const TUPECESchedulingSystem = () => {
     return combinations;
   };
 
-  // Find available time slot for a session
-  const findAvailableTimeSlot = (day, requiredSlots, room) => {
+  // FIXED: Find available time slot for a session - now checks against planned sessions too
+  const findAvailableTimeSlot = (day, requiredSlots, room, plannedSessions = []) => {
     const sessionDurationMinutes = requiredSlots * 30;
     
     for (let i = 0; i <= timeSlots.length - requiredSlots; i++) {
@@ -436,7 +433,7 @@ const TUPECESchedulingSystem = () => {
         const slotTime = timeSlots[j];
         
         // Check if any existing schedule conflicts
-        const conflict = schedules.find(schedule => {
+        const existingConflict = schedules.find(schedule => {
           if (schedule.day !== day) return false;
           
           const schedStart = timeToMinutes(schedule.startTime);
@@ -447,7 +444,6 @@ const TUPECESchedulingSystem = () => {
           const hasTimeOverlap = slotStart < schedEnd && slotEnd > schedStart;
           
           if (hasTimeOverlap) {
-            // Check for conflicts
             return schedule.room === room || 
                    schedule.faculty === finderData.faculty || 
                    schedule.section === finderData.section;
@@ -456,7 +452,26 @@ const TUPECESchedulingSystem = () => {
           return false;
         });
         
-        if (conflict) {
+        // FIXED: Check if any planned session in current pattern conflicts
+        const plannedConflict = plannedSessions.find(planned => {
+          if (planned.day !== day) return false;
+          
+          const plannedStart = timeToMinutes(planned.startTime);
+          const plannedEnd = timeToMinutes(planned.endTime);
+          const slotStart = timeToMinutes(slotTime);
+          const slotEnd = slotStart + 30;
+          
+          const hasTimeOverlap = slotStart < plannedEnd && slotEnd > plannedStart;
+          
+          if (hasTimeOverlap) {
+            // Check for room conflict or faculty/section conflict with planned session
+            return planned.room === room;
+          }
+          
+          return false;
+        });
+        
+        if (existingConflict || plannedConflict) {
           isAvailable = false;
           break;
         }
