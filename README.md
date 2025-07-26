@@ -191,7 +191,7 @@ We welcome contributions to improve the TUP ECE Schedule Management System!
 - Limited to single-semester scheduling
 
 ### Planned Features
-- [✅] Database integration for persistent storage
+- [x] Database integration for persistent storage
 - [ ] User authentication and role management
 - [ ] Multi-semester support
 - [ ] Export schedules to PDF/Excel
